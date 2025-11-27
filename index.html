@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4-7-8 呼吸法引導工具 V4.5 防阻塞修正版</title>
+    <title>4-7-8 呼吸法引導工具 V5.0 簡約模式版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -54,6 +54,32 @@
             cursor: pointer;
             transition: background-color 0.3s;
             z-index: 100; 
+        }
+        
+        /* ========================================= */
+        /* 【V5.0 簡約模式 CSS 核心】 */
+        /* ========================================= */
+
+        /* 呼吸時，隱藏設定面板、循環計數器和外部連結 */
+        body.is-breathing #settings,
+        body.is-breathing #cycle-counter,
+        body.is-breathing #external-links {
+            display: none !important;
+        }
+
+        /* 呼吸時，讓標題 (H1) 隱藏，讓呼吸文字更突出 */
+        body.is-breathing h1 {
+            display: none !important;
+        }
+
+        /* 確保呼吸文字在簡約模式下能向上移動並置中 */
+        body.is-breathing #instruction-text {
+            font-size: 3rem !important; /* Tailwind text-5xl (3rem) 保持不變或略微調整 */
+            margin-top: 5rem !important; /* 向上推動，使核心區域置中 */
+        }
+        /* 確保開始按鈕下的提示文字也隱藏 */
+        body.is-breathing .static-note {
+             display: none !important;
         }
     </style>
     <script>
@@ -106,7 +132,7 @@
         </div>
     </div>
     
-    <div class="mb-6 high-z-index flex space-x-4 justify-center">
+    <div id="external-links" class="mb-6 high-z-index flex space-x-4 justify-center">
         <a href="https://open.spotify.com/album/0sw9KB288QlPN5Oy6993FD?si=E0NrGcZCQ322IPlSYRPG9w" target="_blank" class="flex items-center px-4 py-2 bg-spotify-green text-white rounded-full text-lg shadow-md hover:bg-green-700 transition duration-300">
             <i class="fab fa-spotify mr-2"></i>
             Spotify 清單
@@ -139,7 +165,7 @@
         開始呼吸
     </button>
     
-    <p class="mt-8 text-sm text-gray-400 high-z-index">點擊上方按鈕開始</p>
+    <p class="mt-8 text-sm text-gray-400 high-z-index static-note">點擊上方按鈕開始</p>
 
     <script>
         const ball = document.getElementById('breathing-ball');
@@ -200,7 +226,6 @@
             }
         }
         
-        // 【修正】確保 AudioContext 安全初始化
         function ensureAudioContext() {
             if (!audioContext) {
                 try {
@@ -225,7 +250,6 @@
         
         function startBackgroundMusic(style) {
             stopBackgroundMusic(); 
-            // 由於 startBreathing 會確保 audioContext 存在，這裡不再需要額外的 ensureAudioContext()
             if (style === '0') return;
             
             let frequencies = [];
@@ -391,7 +415,6 @@
         function startBreathing() {
             if (isRunning) return;
             
-            // 【修正】將所有可能失敗的初始化放在 try...catch 中，優先啟動UI
             try {
                  ensureAudioContext(); 
                  applyMusicSettings(); 
@@ -405,6 +428,9 @@
             isRunning = true;
             button.textContent = "停止";
             
+            // 【V5.0 優化】進入簡約模式
+            document.body.classList.add('is-breathing');
+
             // 鎖定 UI
             inTimeInput.disabled = true;
             holdTimeInput.disabled = true;
@@ -423,6 +449,9 @@
         function stopBreathing(isCompleted = false) {
             isRunning = false;
             
+            // 【V5.0 優化】退出簡約模式
+            document.body.classList.remove('is-breathing');
+
             // 解鎖 UI
             inTimeInput.disabled = false;
             holdTimeInput.disabled = false;
