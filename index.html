@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4-7-8 呼吸法引導工具 V4.5 防阻塞修正版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --color-blue: #4a90e2; 
+            --color-green: #6aa84f; 
+        }
+
+        .breathing-ball {
+            transition-property: all;
+            transition-timing-function: ease-in-out;
+            width: 50vw;  
+            height: 50vw; 
+            max-width: 300px; 
+            max-height: 300px; 
+            transform: scale(1.0); 
+            background-color: var(--color-blue); 
+            box-shadow: 
+                0 0 10px rgba(74, 144, 226, 0.8), 
+                0 0 20px rgba(74, 144, 226, 0.6), 
+                0 0 40px rgba(74, 144, 226, 0.4), 
+                0 0 60px rgba(74, 144, 226, 0.2); 
+            z-index: 10; 
+        }
+        
+        .high-z-index {
+            z-index: 20;
+            position: relative; 
+        }
+
+        .input-box, .select-box {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 0.3rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 1rem;
+        }
+        .input-box { width: 50px; text-align: center; }
+        
+        #sound-toggle {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            padding: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            z-index: 100; 
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'deep-sea-blue': '#0a192f',
+                        'spotify-green': '#1DB954', 
+                        'youtube-red': '#FF0000', 
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-deep-sea-blue text-white flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div id="sound-toggle" onclick="toggleMute()">
+        <span id="sound-icon" class="text-3xl high-z-index">🔔</span>
+    </div>
+
+    <h1 class="text-4xl font-light mb-8 tracking-wider high-z-index">呼吸法引導工具</h1>
+
+    <div id="settings" class="mb-8 p-4 bg-gray-700/50 rounded-lg high-z-index text-lg">
+        <div class="flex space-x-4 mb-4 items-center justify-center">
+            <div class="flex flex-col items-center"><label for="in-time">吸氣 (秒)</label><input type="number" id="in-time" value="4" min="1" class="input-box"></div>
+            <div class="flex flex-col items-center"><label for="hold-time">憋氣 (秒)</label><input type="number" id="hold-time" value="7" min="0" class="input-box"></div>
+            <div class="flex flex-col items-center"><label for="out-time">吐氣 (秒)</label><input type="number" id="out-time" value="8" min="1" class="input-box"></div>
+        </div>
+        
+        <div class="flex flex-col space-y-3">
+            <div class="flex items-center justify-center">
+                <label for="cycles">總循環次數：</label>
+                <input type="number" id="cycles" value="4" min="1" max="99" class="input-box ml-2 w-16">
+                <span class="ml-2 text-sm text-gray-400"> (99 為無限)</span>
+            </div>
+
+            <div class="flex items-center justify-center">
+                <label for="background-music">背景音頻：</label>
+                <select id="background-music" class="select-box ml-2">
+                    <option value="0">靜音</option>
+                    <option value="chord">輕柔和弦</option>
+                    <option value="432">432 Hz</option>
+                    <option value="528">528 Hz</option>
+                </select>
+                <button onclick="applyMusicSettings()" class="ml-3 px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm transition">應用</button>
+            </div>
+            
+        </div>
+    </div>
+    
+    <div class="mb-6 high-z-index flex space-x-4 justify-center">
+        <a href="https://open.spotify.com/album/0sw9KB288QlPN5Oy6993FD?si=E0NrGcZCQ322IPlSYRPG9w" target="_blank" class="flex items-center px-4 py-2 bg-spotify-green text-white rounded-full text-lg shadow-md hover:bg-green-700 transition duration-300">
+            <i class="fab fa-spotify mr-2"></i>
+            Spotify 清單
+        </a>
+        <a href="https://music.youtube.com/watch?v=zCgn4WGcODM&si=eq0qNTWiPnDo2izv" target="_blank" class="flex items-center px-4 py-2 bg-youtube-red text-white rounded-full text-lg shadow-md hover:bg-red-700 transition duration-300">
+            <i class="fab fa-youtube mr-2"></i>
+            YouTube Music
+        </a>
+    </div>
+
+    <div id="cycle-counter" class="text-2xl font-light mb-4 h-10 flex items-center justify-center tracking-widest high-z-index">
+        當前循環: 0 / 4
+    </div>
+
+    <div id="instruction-text" class="text-5xl font-extralight mb-4 h-20 flex items-center justify-center tracking-widest high-z-index">
+        點擊下方按鈕開始...
+    </div>
+
+    <div id="countdown-text" class="text-7xl font-bold text-blue-300 mb-12 h-20 flex items-center justify-center opacity-0 transition-opacity duration-500 high-z-index">
+        
+    </div>
+
+    <div id="breathing-ball" 
+         class="breathing-ball rounded-full flex-shrink-0">
+    </div>
+
+    <button id="toggle-button" 
+            class="mt-16 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-xl rounded-full shadow-lg transition duration-300 ease-in-out high-z-index"
+            onclick="toggleBreathing()">
+        開始呼吸
+    </button>
+    
+    <p class="mt-8 text-sm text-gray-400 high-z-index">點擊上方按鈕開始</p>
+
+    <script>
+        const ball = document.getElementById('breathing-ball');
+        const text = document.getElementById('instruction-text');
+        const countdownText = document.getElementById('countdown-text');
+        const button = document.getElementById('toggle-button');
+        const soundIcon = document.getElementById('sound-icon');
+        const cycleCounterDisplay = document.getElementById('cycle-counter');
+
+        const inTimeInput = document.getElementById('in-time');
+        const holdTimeInput = document.getElementById('hold-time');
+        const outTimeInput = document.getElementById('out-time');
+        const cyclesInput = document.getElementById('cycles');
+        const musicSelect = document.getElementById('background-music'); 
+        
+        let isRunning = false;
+        let intervalId;       
+        let isMuted = false; 
+        let pulseIntervalId; 
+        
+        let currentCycle = 0;
+        let totalCycles = 4;
+        let TIMES = { IN: 4, HOLD: 7, OUT: 8 }; 
+        
+        let currentAudioStyle = '0';
+        let backgroundOscillators = []; 
+        const CHORD_FREQUENCIES = [130.81, 164.81, 196.00]; 
+
+        const SCALE_MIN = 0.5; 
+        const SCALE_MAX = 1.5; 
+        
+        // 波動參數
+        const PULSE_MIN_SCALE = 1.0; 
+        const PULSE_MAX_SCALE = 1.03; 
+        const PULSE_SPEED = 0.001; 
+
+        // 顏色定義
+        const COLOR_BLUE = getComputedStyle(document.documentElement).getPropertyValue('--color-blue');
+        const COLOR_GREEN = getComputedStyle(document.documentElement).getPropertyValue('--color-green');
+
+        let audioContext = null;
+
+        function setTransitionDuration(seconds) {
+            ball.style.transitionDuration = `${seconds}s`;
+        }
+        
+        function updateSettings() {
+            TIMES.IN = parseInt(inTimeInput.value) || 4;
+            TIMES.HOLD = parseInt(holdTimeInput.value) || 7;
+            TIMES.OUT = parseInt(outTimeInput.value) || 8;
+            totalCycles = parseInt(cyclesInput.value) || 4;
+            
+            if (totalCycles > 98) {
+                totalCycles = 99;
+                cycleCounterDisplay.textContent = `當前循環: ${currentCycle} / ∞`;
+            } else {
+                cycleCounterDisplay.textContent = `當前循環: ${currentCycle} / ${totalCycles}`;
+            }
+        }
+        
+        // 【修正】確保 AudioContext 安全初始化
+        function ensureAudioContext() {
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    isMuted = true;
+                    soundIcon.textContent = "🔕";
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function stopBackgroundMusic() {
+            if (backgroundOscillators.length > 0) {
+                backgroundOscillators.forEach(osc => {
+                    try { osc.stop(); } catch (e) {}
+                });
+                backgroundOscillators = [];
+            }
+        }
+        
+        function startBackgroundMusic(style) {
+            stopBackgroundMusic(); 
+            // 由於 startBreathing 會確保 audioContext 存在，這裡不再需要額外的 ensureAudioContext()
+            if (style === '0') return;
+            
+            let frequencies = [];
+            if (style === 'chord') {
+                frequencies = CHORD_FREQUENCIES; 
+            } else {
+                frequencies = [parseInt(style)]; 
+            }
+            
+            frequencies.forEach(freq => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+                
+                gainNode.gain.setValueAtTime(0.05, audioContext.currentTime); 
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.start();
+                backgroundOscillators.push(oscillator);
+            });
+        }
+
+        function applyMusicSettings() {
+             ensureAudioContext(); 
+             currentAudioStyle = musicSelect.value;
+             if (isRunning) {
+                startBackgroundMusic(currentAudioStyle);
+             }
+        }
+        
+        function generateDingSound() {
+            if (isMuted || !audioContext) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05); 
+            gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5);   
+            oscillator.frequency.setValueAtTime(600, audioContext.currentTime); 
+            oscillator.type = 'sine';
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        function toggleMute() {
+            ensureAudioContext(); 
+            isMuted = !isMuted;
+            if (isMuted) {
+                soundIcon.textContent = "🔕"; 
+            } else {
+                soundIcon.textContent = "🔔"; 
+                if (audioContext) generateDingSound(); 
+            }
+        }
+        
+        function startPulse() {
+            let isGrowing = true;
+            let currentPulseScale = PULSE_MIN_SCALE;
+            
+            setTransitionDuration(0); 
+
+            pulseIntervalId = setInterval(() => {
+                if (!isRunning) {
+                    clearInterval(pulseIntervalId);
+                    return;
+                }
+                if (isGrowing) {
+                    currentPulseScale += PULSE_SPEED;
+                    if (currentPulseScale >= PULSE_MAX_SCALE) {
+                        isGrowing = false;
+                    }
+                } else {
+                    currentPulseScale -= PULSE_SPEED;
+                    if (currentPulseScale <= PULSE_MIN_SCALE) {
+                        isGrowing = true;
+                    }
+                }
+                ball.style.transform = `scale(${SCALE_MAX * currentPulseScale})`;
+            }, 20); 
+        }
+        
+        function stopPulse() {
+            clearInterval(pulseIntervalId);
+        }
+
+        function startCountdown(duration, nextPhaseCallback) {
+            let timeLeft = duration;
+            countdownText.classList.remove('opacity-0');
+            countdownText.textContent = timeLeft;
+            clearInterval(intervalId);
+            intervalId = setInterval(() => {
+                timeLeft--;
+                countdownText.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(intervalId);
+                    countdownText.classList.add('opacity-0');
+                    nextPhaseCallback();
+                }
+            }, 1000);
+        }
+
+        // --- 核心呼吸循環邏輯 ---
+        
+        function inhale() {
+            if (!isRunning) return;
+            if (currentCycle >= totalCycles && totalCycles !== 99) { stopBreathing(true); return; }
+            currentCycle++;
+            updateSettings(); 
+            generateDingSound(); 
+
+            text.textContent = "開始吸氣...";
+            ball.style.backgroundColor = COLOR_BLUE; 
+            ball.style.transform = `scale(${SCALE_MIN})`; 
+
+            requestAnimationFrame(() => {
+                text.textContent = "吸氣區間..."; 
+                setTransitionDuration(TIMES.IN); 
+                ball.style.transform = `scale(${SCALE_MAX})`; 
+                ball.style.backgroundColor = COLOR_GREEN; 
+                startCountdown(TIMES.IN, hold);
+            });
+        }
+
+        function hold() {
+            if (!isRunning) return;
+            generateDingSound(); 
+
+            text.textContent = "憋氣..."; 
+            setTransitionDuration(0.01); 
+            ball.style.transform = `scale(${SCALE_MAX})`; 
+            ball.style.backgroundColor = COLOR_GREEN; 
+            startPulse(); 
+            startCountdown(TIMES.HOLD, exhale);
+        }
+
+        function exhale() {
+            if (!isRunning) return;
+            stopPulse(); 
+            generateDingSound(); 
+
+            text.textContent = "吐氣區間..."; 
+            setTransitionDuration(TIMES.OUT); 
+            
+            ball.style.transform = `scale(${SCALE_MIN})`; 
+            ball.style.backgroundColor = COLOR_BLUE; 
+
+            let countdownEndTime = TIMES.OUT * 1000;
+            setTimeout(() => {
+                if (isRunning) {
+                     text.textContent = "吐氣銜接吸氣..."; 
+                }
+            }, countdownEndTime);
+
+            startCountdown(TIMES.OUT, inhale);
+        }
+
+        // --- 控制邏輯 ---
+        function startBreathing() {
+            if (isRunning) return;
+            
+            // 【修正】將所有可能失敗的初始化放在 try...catch 中，優先啟動UI
+            try {
+                 ensureAudioContext(); 
+                 applyMusicSettings(); 
+                 startBackgroundMusic(currentAudioStyle); 
+            } catch (e) {
+                 console.error("Audio/Settings startup failed, continuing core loop.", e);
+            }
+            
+            currentCycle = 0; 
+            
+            isRunning = true;
+            button.textContent = "停止";
+            
+            // 鎖定 UI
+            inTimeInput.disabled = true;
+            holdTimeInput.disabled = true;
+            outTimeInput.disabled = true;
+            cyclesInput.disabled = true;
+            musicSelect.disabled = true;
+            
+            // 核心 UI 初始化
+            ball.style.transform = `scale(${SCALE_MIN})`;
+            ball.style.backgroundColor = COLOR_BLUE;
+
+            // 啟動第一個階段：吸氣
+            requestAnimationFrame(inhale);
+        }
+
+        function stopBreathing(isCompleted = false) {
+            isRunning = false;
+            
+            // 解鎖 UI
+            inTimeInput.disabled = false;
+            holdTimeInput.disabled = false;
+            outTimeInput.disabled = false;
+            cyclesInput.disabled = false;
+            musicSelect.disabled = false;
+            
+            clearInterval(intervalId);
+            stopPulse(); 
+            stopBackgroundMusic(); 
+
+            countdownText.classList.add('opacity-0');
+            countdownText.textContent = ''; 
+            
+            if (isCompleted) {
+                text.textContent = `✅ 呼吸完成！(共 ${currentCycle} 次循環)`;
+                button.textContent = "重新開始";
+            } else {
+                text.textContent = "已暫停，點擊開始...";
+                button.textContent = "繼續呼吸";
+            }
+
+            setTransitionDuration(0.5); 
+            ball.style.transform = `scale(${SCALE_MIN})`; 
+            ball.style.backgroundColor = COLOR_BLUE;
+            
+            currentCycle = 0; 
+            updateSettings(); 
+        }
+
+        function toggleBreathing() {
+            if (isRunning) {
+                stopBreathing();
+            } else {
+                startBreathing();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setTransitionDuration(TIMES.IN);
+            updateSettings(); 
+            currentAudioStyle = musicSelect.value;
+        });
+        
+    </script>
+</body>
+</html>
